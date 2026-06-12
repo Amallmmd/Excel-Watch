@@ -122,7 +122,8 @@ h1 {
     color: var(--navy) !important;
 }
 
-div[data-testid="stButton"] > button {
+div[data-testid="stButton"] > button,
+div[data-testid="stDownloadButton"] > button {
     width: 100%;
     background: var(--green);
     color: var(--navy);
@@ -134,7 +135,8 @@ div[data-testid="stButton"] > button {
     transition: background 0.2s, color 0.2s, border 0.2s;
 }
 
-div[data-testid="stButton"] > button:hover {
+div[data-testid="stButton"] > button:hover,
+div[data-testid="stDownloadButton"] > button:hover {
     background: var(--navy);
     color: var(--white);
     border: 2px solid var(--green);

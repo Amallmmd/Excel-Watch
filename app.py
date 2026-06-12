@@ -1,3 +1,4 @@
+from io import BytesIO
 from pathlib import Path
 
 import pandas as pd
@@ -101,6 +102,15 @@ def build_summary(df):
     return pd.DataFrame(rows)
 
 
+def summary_to_excel(summary):
+    buffer = BytesIO()
+
+    with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
+        summary.to_excel(writer, index=False, sheet_name="Summary")
+
+    return buffer.getvalue()
+
+
 def read_input_file(uploaded_file):
     file_name = uploaded_file.name.lower()
 
@@ -186,4 +196,14 @@ if st.button("Calculate", type="primary"):
         st.stop()
 
     summary = build_summary(selected_rows)
-    st.dataframe(summary, use_container_width=True, hide_index=True)
+    st.session_state["summary"] = summary
+
+if "summary" in st.session_state:
+    st.subheader("Output")
+    st.dataframe(st.session_state["summary"], use_container_width=True, hide_index=True)
+    st.download_button(
+        label="Download Output",
+        data=summary_to_excel(st.session_state["summary"]),
+        file_name="excel_watch_output.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
