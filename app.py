@@ -1,163 +1,59 @@
-import re
-
 import pandas as pd
 import streamlit as st
 
 
 st.set_page_config(page_title="Excel Watch", layout="centered")
 
-
-HEADER_ALIASES = {
-    "srno": "Sr.No",
-    "serialno": "Sr.No",
-    "invoicenumber": "Invoice Number",
-    "invoiceno": "Invoice Number",
-    "invoicedate": "Invoice date",
-    "typeofinvoice": "Type of Invoice",
-    "subscription": "Subscription",
+REQUIRED_COLUMNS = {
+    "customer": "Customer",
+    "invoicedate": "Invoice Date",
     "total": "Total",
 }
 
-REQUIRED_COLUMNS = [
-    "Sr.No",
-    "Invoice Number",
-    "Invoice date",
-    "Type of Invoice",
-    "Subscription",
-    "Total",
-]
+
+def normalize_column_name(name):
+    return "".join(char for char in str(name).lower() if char.isalnum())
 
 
-def clean_text(value):
-    if pd.isna(value):
-        return ""
-    return str(value).strip()
+def find_required_columns(df):
+    found_columns = {}
 
+    for column in df.columns:
+        normalized = normalize_column_name(column)
+        if normalized in REQUIRED_COLUMNS:
+            found_columns[REQUIRED_COLUMNS[normalized]] = column
 
-def normalize_header(value):
-    return re.sub(r"[^a-z0-9]", "", clean_text(value).lower())
-
-
-def find_labeled_value(row_values, pattern):
-    for value in row_values:
-        match = re.match(pattern, clean_text(value), flags=re.IGNORECASE)
-        if match:
-            return match.group(1).strip()
-    return None
-
-
-def find_header(row_values):
-    header = {}
-
-    for index, value in enumerate(row_values):
-        column_name = HEADER_ALIASES.get(normalize_header(value))
-        if column_name:
-            header[column_name] = index
-
-    if all(column in header for column in REQUIRED_COLUMNS):
-        return header
-
-    return None
-
-
-def value_at(row_values, index):
-    if index >= len(row_values):
-        return None
-    return row_values[index]
-
-
-def is_section_total_row(row_values, header):
-    has_total_label = any(clean_text(value).lower() == "total" for value in row_values)
-    invoice_number = clean_text(value_at(row_values, header["Invoice Number"]))
-    invoice_date = clean_text(value_at(row_values, header["Invoice date"]))
-
-    return has_total_label and not invoice_number and not invoice_date
-
-
-def parse_invoice_sheet(raw_df):
-    records = []
-    current_customer = None
-    current_sub_customer = None
-    active_header = None
-
-    for _, row in raw_df.iterrows():
-        row_values = list(row)
-
-        sub_customer = find_labeled_value(
-            row_values, r"^\s*sub\s*[- ]?\s*customer\s*:?\s*(.+)$"
-        )
-        if sub_customer:
-            current_sub_customer = sub_customer
-            active_header = None
-            continue
-
-        customer = find_labeled_value(row_values, r"^\s*customer\s*:?\s*(.+)$")
-        if customer:
-            current_customer = customer
-            current_sub_customer = None
-            active_header = None
-            continue
-
-        header = find_header(row_values)
-        if header:
-            active_header = header
-            continue
-
-        if not active_header or not current_customer or not current_sub_customer:
-            continue
-
-        if not any(clean_text(value) for value in row_values):
-            continue
-
-        if is_section_total_row(row_values, active_header):
-            active_header = None
-            continue
-
-        record = {
-            "Customer": current_customer,
-            "Sub-Customer": current_sub_customer,
-        }
-
-        for column in REQUIRED_COLUMNS:
-            record[column] = value_at(row_values, active_header[column])
-
-        records.append(record)
-
-    invoices = pd.DataFrame(records)
-    if invoices.empty:
-        return invoices
-
-    for column in ["Invoice Number", "Type of Invoice", "Subscription"]:
-        invoices[column] = invoices[column].map(clean_text)
-
-    invoices["Invoice date"] = pd.to_datetime(invoices["Invoice date"], errors="coerce")
-    invoices["Total"] = pd.to_numeric(invoices["Total"], errors="coerce")
-    invoices = invoices.dropna(subset=["Invoice date", "Total"]).copy()
-
-    if invoices.empty:
-        return invoices
-
-    invoices["Year"] = invoices["Invoice date"].dt.year
-    invoices["Month Number"] = invoices["Invoice date"].dt.month
-    invoices["Month"] = invoices["Invoice date"].dt.month_name()
-    invoices["Year-Month"] = invoices["Invoice date"].dt.to_period("M").astype(str)
-
-    return invoices[
-        [
-            "Customer",
-            "Sub-Customer",
-            "Sr.No",
-            "Invoice Number",
-            "Invoice date",
-            "Type of Invoice",
-            "Subscription",
-            "Total",
-            "Year",
-            "Month Number",
-            "Month",
-            "Year-Month",
-        ]
+    missing_columns = [
+        display_name
+        for display_name in REQUIRED_COLUMNS.values()
+        if display_name not in found_columns
     ]
+
+    return found_columns, missing_columns
+
+
+def prepare_data(df, found_columns):
+    prepared = df.rename(
+        columns={
+            found_columns["Customer"]: "Customer",
+            found_columns["Invoice Date"]: "Invoice Date",
+            found_columns["Total"]: "Total",
+        }
+    ).copy()
+
+    prepared["Customer"] = prepared["Customer"].astype(str).str.strip()
+    prepared["Invoice Date"] = pd.to_datetime(prepared["Invoice Date"], errors="coerce")
+    prepared["Total"] = pd.to_numeric(prepared["Total"], errors="coerce")
+
+    prepared = prepared.dropna(subset=["Customer", "Invoice Date", "Total"]).copy()
+    prepared = prepared[prepared["Customer"] != ""].copy()
+
+    prepared["Year"] = prepared["Invoice Date"].dt.year
+    prepared["Month Number"] = prepared["Invoice Date"].dt.month
+    prepared["Month"] = prepared["Invoice Date"].dt.month_name()
+    prepared["Year-Month"] = prepared["Invoice Date"].dt.to_period("M").astype(str)
+
+    return prepared
 
 
 def month_options(df):
@@ -170,64 +66,105 @@ def month_options(df):
     return months["Month"].tolist()
 
 
+def build_summary(df):
+    rows = []
+
+    for customer, customer_df in df.groupby("Customer", sort=True):
+        rows.append(
+            {
+                "Row Labels": customer,
+                "Sum of Total": customer_df["Total"].sum(),
+            }
+        )
+
+        monthly_totals = (
+            customer_df.groupby("Year-Month", as_index=False)["Total"]
+            .sum()
+            .sort_values("Year-Month")
+        )
+
+        for _, month_row in monthly_totals.iterrows():
+            rows.append(
+                {
+                    "Row Labels": month_row["Year-Month"],
+                    "Sum of Total": month_row["Total"],
+                }
+            )
+
+    return pd.DataFrame(rows)
+
+
+def read_input_file(uploaded_file):
+    file_name = uploaded_file.name.lower()
+
+    if file_name.endswith(".csv"):
+        return pd.read_csv(uploaded_file)
+
+    return pd.read_excel(uploaded_file, engine="openpyxl")
+
+
 st.title("Excel Watch")
 
-uploaded_file = st.file_uploader("Upload Excel file", type=["xlsx"])
+uploaded_file = st.file_uploader("Upload Excel or CSV file", type=["xlsx", "csv"])
 
 if uploaded_file is None:
-    st.info("Upload an Excel file to start.")
+    st.info("Upload an Excel or CSV file to start.")
     st.stop()
 
 try:
-    raw_data = pd.read_excel(uploaded_file, header=None, engine="openpyxl")
+    input_data = read_input_file(uploaded_file)
 except Exception as error:
-    st.error(f"Could not read this Excel file: {error}")
+    st.error(f"Could not read this file: {error}")
     st.stop()
 
-invoices = parse_invoice_sheet(raw_data)
+found_columns, missing_columns = find_required_columns(input_data)
 
-if invoices.empty:
-    st.warning("No valid invoice table was found in this Excel file.")
+if missing_columns:
+    st.warning(
+        "Missing required columns: " + ", ".join(missing_columns)
+    )
     st.stop()
 
-st.success(f"Loaded {len(invoices)} invoice rows.")
+data = prepare_data(input_data, found_columns)
 
-customer = st.selectbox("Customer", sorted(invoices["Customer"].unique()))
+if data.empty:
+    st.warning("No valid rows found after reading Customer, Invoice Date, and Total.")
+    st.stop()
 
-customer_rows = invoices[invoices["Customer"] == customer]
-sub_customer = st.selectbox(
-    "Sub-Customer", sorted(customer_rows["Sub-Customer"].unique())
-)
+st.success(f"Loaded {len(data)} valid rows.")
 
-sub_customer_rows = customer_rows[customer_rows["Sub-Customer"] == sub_customer]
-year = st.selectbox("Year", sorted(sub_customer_rows["Year"].unique(), reverse=True))
+st.subheader("Input Preview")
+st.dataframe(input_data, use_container_width=True, hide_index=True)
 
-year_rows = sub_customer_rows[sub_customer_rows["Year"] == year]
-month = st.selectbox("Month", month_options(year_rows))
+customers = sorted(data["Customer"].unique())
+selected_customers = st.multiselect("Customer", customers, default=customers)
+
+if selected_customers:
+    customer_rows = data[data["Customer"].isin(selected_customers)]
+else:
+    customer_rows = data.iloc[0:0]
+
+years = sorted(customer_rows["Year"].unique(), reverse=True)
+selected_years = st.multiselect("Year", years, default=years)
+
+if selected_years:
+    year_rows = customer_rows[customer_rows["Year"].isin(selected_years)]
+else:
+    year_rows = data.iloc[0:0]
+
+months = month_options(year_rows) if not year_rows.empty else []
+selected_months = st.multiselect("Month", months, default=months)
 
 if st.button("Calculate", type="primary"):
-    selected_rows = year_rows[year_rows["Month"] == month].copy()
-    selected_total = selected_rows["Total"].sum()
+    if not selected_customers or not selected_years or not selected_months:
+        st.warning("Select at least one customer, year, and month.")
+        st.stop()
 
-    st.metric("Total", f"{selected_total:,.2f}")
-    st.dataframe(
-        selected_rows[
-            [
-                "Invoice Number",
-                "Invoice date",
-                "Type of Invoice",
-                "Subscription",
-                "Total",
-            ]
-        ],
-        use_container_width=True,
-        hide_index=True,
-    )
+    selected_rows = year_rows[year_rows["Month"].isin(selected_months)].copy()
 
-    st.subheader("Monthly Summary")
-    summary = (
-        invoices.groupby(["Customer", "Year-Month"], as_index=False)["Total"]
-        .sum()
-        .sort_values(["Customer", "Year-Month"])
-    )
+    if selected_rows.empty:
+        st.warning("No rows match the selected filters.")
+        st.stop()
+
+    summary = build_summary(selected_rows)
     st.dataframe(summary, use_container_width=True, hide_index=True)
