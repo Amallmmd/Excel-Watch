@@ -102,13 +102,10 @@ def build_summary(df):
     return pd.DataFrame(rows)
 
 
-def summary_to_excel(summary):
-    buffer = BytesIO()
 
-    with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
-        summary.to_excel(writer, index=False, sheet_name="Summary")
 
-    return buffer.getvalue()
+def summary_to_csv(summary):
+    return summary.to_csv(index=False).encode("utf-8")
 
 
 def read_input_file(uploaded_file):
@@ -117,7 +114,7 @@ def read_input_file(uploaded_file):
     if file_name.endswith(".csv"):
         return pd.read_csv(uploaded_file)
 
-    return pd.read_excel(uploaded_file, engine="openpyxl")
+    return pd.read_excel(uploaded_file)
 
 
 def select_filter(label, options):
@@ -134,7 +131,7 @@ load_theme()
 
 st.title("Excel Watch")
 
-uploaded_file = st.file_uploader("Upload Excel or CSV file", type=["xlsx", "csv"])
+uploaded_file = st.file_uploader("Upload Excel or CSV file", type=["csv", "xlsx"])
 
 if uploaded_file is None:
     st.info("Upload an Excel or CSV file to start.")
@@ -203,7 +200,7 @@ if "summary" in st.session_state:
     st.dataframe(st.session_state["summary"], use_container_width=True, hide_index=True)
     st.download_button(
         label="Download Output",
-        data=summary_to_excel(st.session_state["summary"]),
-        file_name="excel_watch_output.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        data=summary_to_csv(st.session_state["summary"]),
+        file_name="report_output.csv",
+        mime="text/csv",
     )
