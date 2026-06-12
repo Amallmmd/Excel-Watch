@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pandas as pd
 import streamlit as st
-
+from openpyxl.workbook import Workbook
 
 st.set_page_config(page_title="Excel Watch", layout="centered")
 
@@ -197,13 +197,3 @@ if st.button("Calculate", type="primary"):
 
     summary = build_summary(selected_rows)
     st.session_state["summary"] = summary
-
-if "summary" in st.session_state:
-    st.subheader("Output")
-    st.dataframe(st.session_state["summary"], use_container_width=True, hide_index=True)
-    st.download_button(
-        label="Download Output",
-        data=summary_to_excel(st.session_state["summary"]),
-        file_name="excel_watch_output.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    )
