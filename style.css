@@ -1,0 +1,158 @@
+:root {
+    --navy: #071447;
+    --navy-soft: #101c36;
+    --navy-light: #18244a;
+    --green: #80c41c;
+    --green-soft: #eaf6d5;
+    --panel: #e8ecff;
+    --white: #fcfcfc;
+}
+
+.stApp {
+    background:
+        linear-gradient(rgba(7, 20, 71, 0.78), rgba(7, 20, 71, 0.86)),
+        radial-gradient(circle at top left, #1e3a72 0, transparent 34%),
+        linear-gradient(135deg, #071447 0%, #101c36 55%, #0b1f3a 100%);
+    color: var(--navy);
+    font-family: "Segoe UI", Arial, sans-serif;
+}
+
+.block-container {
+    max-width: 700px;
+    margin-top: 32px;
+    margin-bottom: 32px;
+    padding: 28px 30px 34px;
+    background: var(--panel);
+    border-radius: 12px;
+    box-shadow: 0 2px 16px #07144766;
+}
+
+h1,
+h2,
+h3,
+label,
+p {
+    color: var(--navy) !important;
+    font-family: "Segoe UI", Arial, sans-serif;
+}
+
+h1 {
+    text-align: center;
+    margin-bottom: 24px;
+    font-weight: 700;
+}
+
+[data-testid="stFileUploader"],
+[data-testid="stDataFrame"],
+[data-testid="stMultiSelect"],
+[data-testid="stAlert"],
+[data-testid="stCheckbox"] {
+    position: relative;
+    z-index: 1;
+}
+
+[data-testid="stFileUploader"] section {
+    background: var(--navy);
+    border: 2px dashed var(--green);
+    border-radius: 12px;
+    color: var(--white);
+}
+
+[data-testid="stFileUploader"] section p,
+[data-testid="stFileUploader"] section span,
+[data-testid="stFileUploader"] section small {
+    color: var(--white) !important;
+}
+
+[data-testid="stFileUploader"] button {
+    background: var(--green) !important;
+    color: var(--navy) !important;
+    border: 1px solid var(--green) !important;
+    border-radius: 8px;
+    font-weight: 700;
+    transition: background 0.2s, color 0.2s, border 0.2s;
+}
+
+[data-testid="stFileUploader"] button:hover {
+    background: var(--navy) !important;
+    color: var(--white) !important;
+    border: 1px solid var(--green) !important;
+}
+
+[data-testid="stCheckbox"] label {
+    color: var(--navy) !important;
+    font-weight: 600;
+}
+
+[data-testid="stCheckbox"] span {
+    color: var(--navy) !important;
+}
+
+[data-baseweb="checkbox"] div {
+    border-color: var(--green) !important;
+}
+
+[data-baseweb="checkbox"][aria-checked="true"] div {
+    background: var(--green) !important;
+    border-color: var(--green) !important;
+}
+
+[data-baseweb="select"] > div {
+    background: var(--navy-soft);
+    border: 2px solid var(--green);
+    border-radius: 8px;
+    color: var(--white);
+    transition: border 0.2s, box-shadow 0.2s, background 0.2s;
+}
+
+[data-baseweb="select"] > div:focus-within {
+    border-color: var(--green);
+    box-shadow: 0 0 0 2px #80c41c55;
+    background: var(--navy-light);
+}
+
+[data-baseweb="tag"] {
+    background: var(--green);
+    color: var(--navy);
+    border-radius: 8px;
+    font-weight: 600;
+}
+
+[data-baseweb="tag"] span {
+    color: var(--navy) !important;
+}
+
+div[data-testid="stButton"] > button {
+    width: 100%;
+    background: var(--green);
+    color: var(--navy);
+    border: none;
+    border-radius: 8px;
+    font-weight: 700;
+    padding: 10px 16px;
+    box-shadow: 0 1px 4px #1a1a2a33;
+    transition: background 0.2s, color 0.2s, border 0.2s;
+}
+
+div[data-testid="stButton"] > button:hover {
+    background: var(--navy);
+    color: var(--white);
+    border: 2px solid var(--green);
+}
+
+[data-testid="stDataFrame"] {
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px #cbe3a0;
+}
+
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+    background: var(--green-soft);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--navy);
+    border-radius: 4px;
+}

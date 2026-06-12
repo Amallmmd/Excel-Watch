@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pandas as pd
 import streamlit as st
 
@@ -9,6 +11,11 @@ REQUIRED_COLUMNS = {
     "invoicedate": "Invoice Date",
     "total": "Total",
 }
+
+
+def load_theme():
+    css_path = Path(__file__).with_name("style.css")
+    st.markdown(f"<style>{css_path.read_text()}</style>", unsafe_allow_html=True)
 
 
 def normalize_column_name(name):
@@ -103,6 +110,18 @@ def read_input_file(uploaded_file):
     return pd.read_excel(uploaded_file, engine="openpyxl")
 
 
+def select_filter(label, options):
+    options = list(options)
+    use_all = st.checkbox(f"All {label.lower()}", disabled=not options)
+
+    if use_all:
+        return options
+
+    return st.multiselect(label, options, disabled=not options)
+
+
+load_theme()
+
 st.title("Excel Watch")
 
 uploaded_file = st.file_uploader("Upload Excel or CSV file", type=["xlsx", "csv"])
@@ -137,7 +156,7 @@ st.subheader("Input Preview")
 st.dataframe(input_data, use_container_width=True, hide_index=True)
 
 customers = sorted(data["Customer"].unique())
-selected_customers = st.multiselect("Customer", customers, default=customers)
+selected_customers = select_filter("Customers", customers)
 
 if selected_customers:
     customer_rows = data[data["Customer"].isin(selected_customers)]
@@ -145,7 +164,7 @@ else:
     customer_rows = data.iloc[0:0]
 
 years = sorted(customer_rows["Year"].unique(), reverse=True)
-selected_years = st.multiselect("Year", years, default=years)
+selected_years = select_filter("Years", years)
 
 if selected_years:
     year_rows = customer_rows[customer_rows["Year"].isin(selected_years)]
@@ -153,7 +172,7 @@ else:
     year_rows = data.iloc[0:0]
 
 months = month_options(year_rows) if not year_rows.empty else []
-selected_months = st.multiselect("Month", months, default=months)
+selected_months = select_filter("Months", months)
 
 if st.button("Calculate", type="primary"):
     if not selected_customers or not selected_years or not selected_months:
