@@ -147,10 +147,6 @@ def render_date_calendar(df, key):
     month_name = calendar.month_name[month_number]
 
     title_column.markdown(f"**{month_name} {year}**")
-    st.caption(
-        f"{len(st.session_state[selected_key])} selected date"
-        f"{'' if len(st.session_state[selected_key]) == 1 else 's'}"
-    )
 
     header_columns = st.columns(7)
     for index, day_name in enumerate(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]):
@@ -173,7 +169,6 @@ def render_date_calendar(df, key):
                 str(day),
                 disabled=not is_available,
                 key=button_key,
-                type="primary" if is_selected else "secondary",
                 use_container_width=True,
             )
 
@@ -183,7 +178,18 @@ def render_date_calendar(df, key):
                 else:
                     selected_dates.add(current_date)
 
+                st.session_state[selected_key] = sorted(selected_dates)
+                st.rerun()
+
     st.session_state[selected_key] = sorted(selected_dates)
+
+    if st.session_state[selected_key]:
+        formatted_dates = ", ".join(
+            date.strftime("%d-%m-%Y") for date in st.session_state[selected_key]
+        )
+        st.caption(f"Selected dates: {formatted_dates}")
+    else:
+        st.caption("No dates selected.")
 
     return st.session_state[selected_key]
 

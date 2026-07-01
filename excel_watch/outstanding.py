@@ -130,7 +130,7 @@ def render():
     months = month_options(year_rows) if not year_rows.empty else []
     selected_months = select_filter("Months", months, key="outstanding_months")
 
-    if st.button("Calculate", type="primary", key="outstanding_calculate"):
+    if st.button("Calculate", key="outstanding_calculate"):
         if not selected_customers or not selected_years or not selected_months:
             st.warning("Select at least one customer, year, and month.")
             st.stop()
